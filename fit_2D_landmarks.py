@@ -19,6 +19,7 @@ For comments or questions, please email us at flame@tue.mpg.de
 import os
 import cv2
 import sys
+import dlib
 import argparse
 import numpy as np
 import tensorflow as tf
@@ -30,6 +31,9 @@ from utils.project_on_mesh import compute_texture_map
 from tf_smpl.batch_smpl import SMPL
 from tensorflow.contrib.opt import ScipyOptimizerInterface as scipy_pt
 
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("data/shape_predictor_68_face_landmarks.dat")
+
 
 def str2bool(val):
     if isinstance(val, bool):
@@ -40,6 +44,27 @@ def str2bool(val):
         elif val.lower() in ['false', 'f', 'no', 'n']:
             return False
     return False
+
+
+def get_dlib_keypoints_from_image(img):
+    r"""Get face keypoints from an image.
+    Args:
+        img (H x W x 3 numpy array): Input images.
+        predictor_path (str): Path to the predictor model.
+    """
+
+    keypoints = np.zeros([68, 2], dtype=int)
+    dets = detector(img, 1)
+    if len(dets) == 0:
+        return None
+
+    # Only returns the first face.
+    shape = predictor(img, dets[0])
+    for b in range(68):
+        keypoints[b, 0] = shape.part(b).x
+        keypoints[b, 1] = shape.part(b).y
+    return keypoints
+
 
 def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coords, weights, visualize):
     '''
@@ -142,7 +167,7 @@ def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coord
         return Mesh(np_verts, smpl.f), np_scale
 
 
-def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, target_img_path, target_lmk_path, out_path, visualize):
+def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, target_img_path, out_path, visualize):
     if 'generic' not in model_fname:
         print('You are fitting a gender specific model (i.e. female / male). Please make sure you selected the right gender model. Choose the generic model if gender is unknown.')
     if not os.path.exists(flame_lmk_path):
@@ -151,9 +176,6 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, target_img_
     if not os.path.exists(target_img_path):
         print('Target image not found - s' % target_img_path)
         return
-    if not os.path.exists(target_lmk_path):
-        print('Landmarks of target image not found - s' % target_lmk_path)
-        return
 
     if not os.path.exists(out_path):
         os.makedirs(out_path)
@@ -161,7 +183,10 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, target_img_
     lmk_face_idx, lmk_b_coords = load_embedding(flame_lmk_path)
 
     target_img = cv2.imread(target_img_path)
-    lmk_2d = np.load(target_lmk_path)
+    lmk_2d = get_dlib_keypoints_from_image(target_img)
+    if not lmk_2d:
+        print('Face landmarks cannot be identified.')
+        return
 
     weights = {}
     # Weight of the landmark distance term
@@ -215,7 +240,7 @@ if __name__ == '__main__':
     parser.add_argument('--target_img_path', default='./data/imgHQ00088.jpeg', help='Path of the target image')
     # 2D landmark file that should be fitted (landmarks must be corresponding with the defined FLAME landmarks)
     # see "img1_lmks_visualized.jpeg" or "see the img2_lmks_visualized.jpeg" for the order of the landmarks
-    parser.add_argument('--target_lmk_path', default='./data/imgHQ00088_lmks.npy', help='2D landmark file that should be fitted (landmarks must be corresponding with the defined FLAME landmarks)')
+    # parser.add_argument('--target_lmk_path', default='./data/imgHQ00088_lmks.npy', help='2D landmark file that should be fitted (landmarks must be corresponding with the defined FLAME landmarks)')
     # Output path
     parser.add_argument('--out_path', default='./results', help='Path of the fitting output')
     # Visualize fitting
@@ -223,4 +248,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_mapping, args.target_img_path, args.target_lmk_path, args.out_path, str2bool(args.visualize))
+    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_mapping, args.target_img_path, args.out_path, str2bool(args.visualize))
