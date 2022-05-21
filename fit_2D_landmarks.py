@@ -183,8 +183,8 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, target_img_
     lmk_face_idx, lmk_b_coords = load_embedding(flame_lmk_path)
 
     target_img = cv2.imread(target_img_path)
-    lmk_2d = get_dlib_keypoints_from_image(target_img)
-    if not lmk_2d:
+    lmk_2d = get_dlib_keypoints_from_image(target_img)[17:, :]
+    if lmk_2d is None:
         print('Face landmarks cannot be identified.')
         return
 
