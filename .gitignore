@@ -1,5 +1,5 @@
-data/texture_data_256.npy
-.virtualenvs
-models/generic_model.pkl
-*__pycache__*
+results
+data/texture_data_*
+models
 mesh
+*__pycache__

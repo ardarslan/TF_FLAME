@@ -1,16 +1,12 @@
 '''
 Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (MPG) is holder of all proprietary rights on this
 computer program.
-
 You can only use this computer program if you have closed a license agreement with MPG or you get the right to use
 the computer program from someone who is authorized to grant you that right.
-
 Any use of the computer program without a valid license is prohibited and liable to prosecution.
-
 Copyright 2019 Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (MPG). acting on behalf of its
 Max Planck Institute for Intelligent Systems and the Max Planck Institute for Biological Cybernetics.
 All rights reserved.
-
 More information about FLAME is available at http://flame.is.tue.mpg.de.
 For comments or questions, please email us at flame@tue.mpg.de
 '''
@@ -22,7 +18,6 @@ import sys
 import argparse
 import numpy as np
 from psbody.mesh import Mesh
-from psbody.mesh.meshviewer import MeshViewer
 from utils.project_on_mesh import compute_texture_map
 
 

@@ -1,0 +1,18 @@
+name: tf-flame
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - pip
+  - pip:
+    - pyrender==0.1.33
+    - opencv-python==4.1.1.26
+    - chumpy==0.70
+    - scipy==1.2.2
+    - dlib==19.24.0
+    - numpy==1.16.4
+    - trimesh==3.5.15
+    - tensorflow-gpu==1.15.2
+
