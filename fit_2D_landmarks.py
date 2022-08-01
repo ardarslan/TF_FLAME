@@ -164,14 +164,14 @@ def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coord
         return Mesh(np_verts, smpl.f), np_scale, np_rot
 
 
-def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, source_img_path, out_path, visualize):
+def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, input_img_path, out_path, visualize):
     if 'generic' not in model_fname:
         print('You are fitting a gender specific model (i.e. female / male). Please make sure you selected the right gender model. Choose the generic model if gender is unknown.')
     if not os.path.exists(flame_lmk_path):
         print('FLAME landmark embedding not found - %s ' % flame_lmk_path)
         return
-    if not os.path.exists(source_img_path):
-        print('Target image not found - s' % source_img_path)
+    if not os.path.exists(input_img_path):
+        print('Target image not found - s' % input_img_path)
         return
 
     if not os.path.exists(out_path):
@@ -179,7 +179,7 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, source_img_
 
     lmk_face_idx, lmk_b_coords = load_embedding(flame_lmk_path)
 
-    target_img = cv2.imread(source_img_path)
+    target_img = cv2.imread(input_img_path)
     lmk_2d = get_dlib_keypoints_from_image(target_img)[17:, :]
     if lmk_2d is None:
         print('Face landmarks cannot be identified.')
@@ -207,8 +207,8 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, source_img_
         texture_data = np.load(texture_mapping, allow_pickle=True).item()
     texture_map = compute_texture_map(target_img, result_mesh, result_scale, texture_data)
 
-    out_mesh_fname = os.path.join(out_path, os.path.splitext(os.path.basename(source_img_path))[0] + '.obj')
-    out_img_fname = os.path.join(out_path, os.path.splitext(os.path.basename(source_img_path))[0] + '.png')
+    out_mesh_fname = os.path.join(out_path, os.path.splitext(os.path.basename(input_img_path))[0] + '.obj')
+    out_img_fname = os.path.join(out_path, os.path.splitext(os.path.basename(input_img_path))[0] + '.png')
 
     cv2.imwrite(out_img_fname, texture_map)
     result_mesh.set_vertex_colors('white')
@@ -216,8 +216,8 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, source_img_
     result_mesh.ft = texture_data['ft']
     result_mesh.set_texture_image(out_img_fname)
     result_mesh.write_obj(out_mesh_fname)
-    np.save(os.path.join(out_path, os.path.splitext(os.path.basename(source_img_path))[0] + '_scale.npy'), result_scale)
-    np.save(os.path.join(out_path, os.path.splitext(os.path.basename(source_img_path))[0] + '_axis_angle.npy'), result_rot)
+    np.save(os.path.join(out_path, os.path.splitext(os.path.basename(input_img_path))[0] + '_scale.npy'), result_scale)
+    np.save(os.path.join(out_path, os.path.splitext(os.path.basename(input_img_path))[0] + '_axis_angle.npy'), result_rot)
 
     if visualize:
         mv = MeshViewers(shape=[1,2], keepalive=True)
@@ -228,7 +228,7 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, source_img_
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Build texture from image')
 
-    parser.add_argument('--source_img_path', required=True, help='Path of the target image')
+    parser.add_argument('--input_img_path', required=True, help='Path of the target image')
     # Path of the Tensorflow FLAME model (generic, female, male gender)
     parser.add_argument('--model_fname', default='./models/generic_model.pkl', help='Path of the FLAME model')
     # Path of the landamrk embedding file into the FLAME surface
@@ -245,4 +245,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_mapping, args.source_img_path, args.out_path, str2bool(args.visualize))
+    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_mapping, args.input_img_path, args.out_path, str2bool(args.visualize))
