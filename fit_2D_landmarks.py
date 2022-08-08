@@ -85,6 +85,8 @@ def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coord
                                tf.concat((tf_shape, tf_exp), axis=-1),
                                tf.concat((tf_rot, tf_pose), axis=-1)))
 
+    tf_pose_modify = tf.assign(tf_pose[:, 3:6], [[0.0, 0.0, 0.0]])
+
     with tf.Session() as session:
         # session.run(tf.global_variables_initializer())
 
@@ -159,12 +161,16 @@ def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coord
                                              lmk_dist, shape_reg, exp_reg, neck_pose_reg, jaw_pose_reg, eyeballs_pose_reg], loss_callback=on_step)
 
         print('Fitting done')
-        np_verts, np_scale, np_rot = session.run([tf_model, tf_scale, tf_rot])
 
-        return Mesh(np_verts, smpl.f), np_scale, np_rot
+        session.run(tf_pose_modify)
+        np_verts, np_scale, np_rot, np_pose = session.run([tf_model, tf_scale, tf_rot, tf_pose])
+
+        mesh = Mesh(np_verts, smpl.f)
+
+        return mesh, np_scale, np_rot
 
 
-def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, input_img_path, out_path, visualize):
+def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_data_path, input_img_path, out_path, visualize):
     if 'generic' not in model_fname:
         print('You are fitting a gender specific model (i.e. female / male). Please make sure you selected the right gender model. Choose the generic model if gender is unknown.')
     if not os.path.exists(flame_lmk_path):
@@ -173,6 +179,8 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, input_img_p
     if not os.path.exists(input_img_path):
         print('Target image not found - s' % input_img_path)
         return
+
+    out_path = out_path + "_" + texture_data_path.split("_")[-1][:-4]
 
     if not os.path.exists(out_path):
         os.makedirs(out_path)
@@ -202,9 +210,9 @@ def run_2d_lmk_fitting(model_fname, flame_lmk_path, texture_mapping, input_img_p
     result_mesh, result_scale, result_rot = fit_lmk2d(target_img, lmk_2d, model_fname, lmk_face_idx, lmk_b_coords, weights, visualize)
 
     if sys.version_info >= (3, 0):
-        texture_data = np.load(texture_mapping, allow_pickle=True, encoding='latin1').item()
+        texture_data = np.load(texture_data_path, allow_pickle=True, encoding='latin1').item()
     else:
-        texture_data = np.load(texture_mapping, allow_pickle=True).item()
+        texture_data = np.load(texture_data_path, allow_pickle=True).item()
     texture_map = compute_texture_map(target_img, result_mesh, result_scale, texture_data)
 
     out_mesh_fname = os.path.join(out_path, os.path.splitext(os.path.basename(input_img_path))[0] + '.obj')
@@ -229,12 +237,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Build texture from image')
 
     parser.add_argument('--input_img_path', required=True, help='Path of the target image')
+
+    # Pre-computed texture mapping for FLAME topology meshes
+    parser.add_argument('--texture_data_path', required=True, help='pre-computed FLAME texture mapping')
+
     # Path of the Tensorflow FLAME model (generic, female, male gender)
     parser.add_argument('--model_fname', default='./models/generic_model.pkl', help='Path of the FLAME model')
     # Path of the landamrk embedding file into the FLAME surface
     parser.add_argument('--flame_lmk_path', default='./data/flame_static_embedding.pkl', help='Path of the landamrk embedding file into the FLAME surface')
-    # Pre-computed texture mapping for FLAME topology meshes
-    parser.add_argument('--texture_mapping', default='./data/texture_data_2048.npy', help='pre-computed FLAME texture mapping')
     # 2D landmark file that should be fitted (landmarks must be corresponding with the defined FLAME landmarks)
     # see "img1_lmks_visualized.jpeg" or "see the img2_lmks_visualized.jpeg" for the order of the landmarks
     # parser.add_argument('--target_lmk_path', default='./data/imgHQ00088_lmks.npy', help='2D landmark file that should be fitted (landmarks must be corresponding with the defined FLAME landmarks)')
@@ -245,4 +255,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_mapping, args.input_img_path, args.out_path, str2bool(args.visualize))
+    run_2d_lmk_fitting(args.model_fname, args.flame_lmk_path, args.texture_data_path, args.input_img_path, args.out_path, str2bool(args.visualize))
