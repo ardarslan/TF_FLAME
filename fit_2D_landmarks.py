@@ -163,7 +163,7 @@ def fit_lmk2d(target_img, target_2d_lmks, model_fname, lmk_face_idx, lmk_b_coord
         print('Fitting done')
 
         session.run(tf_pose_modify)
-        np_verts, np_scale, np_rot, np_pose = session.run([tf_model, tf_scale, tf_rot, tf_pose])
+        np_verts, np_scale, np_rot = session.run([tf_model, tf_scale, tf_rot])
 
         mesh = Mesh(np_verts, smpl.f)
 
